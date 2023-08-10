@@ -21,6 +21,7 @@ test session file.
 
 # core
 import argparse
+from itertools import chain
 import os
 import pathlib
 # from pprint import pprint
@@ -361,6 +362,30 @@ class Weorcanjan:
             print("Tested only on Windows 10, should work on 11")
             print("")
 
+    ARGDEF_METHOD_DICT = {
+        ("save", "s"):
+            {"m": "save_session", "t": "cmd"},
+        ("restore", "r"):
+            {"m": "restore_session", "t": "cmd"},
+        ("open-data-dir", "odd"):
+            {"m": "open_data_dir", "t": "cmd"},
+        ("create-test-session", "cts"):
+            {"m": "create_test_session", "t": "debug"},
+        ("restore-test-session", "rts"):
+            {"m": "restore_test_session", "t": "debug"},
+        ("test-merge-user-ignore", "tmui"):
+            {"m": "test_merge_user_ignore", "t": "debug"},
+        ("guard-win-ver", "gwv"):
+            {"m": "guard_win_ver", "t": "debug"}
+    }
+    ARGDEF_METHOD_DICT.__doc__ = """
+    Defines all valid commands actions to map to methods.
+    """
+
+    ARGDEF_METHOD_DICT_ITEMS = ARGDEF_METHOD_DICT.items()
+
+    ARGDEF_ALL_COMMANDS_LIST = list(chain(*(map(list, ARGDEF_METHOD_DICT.keys()))))
+
     @staticmethod
     def main() -> None:
         # Set up the arguments for the script as command only style
@@ -368,65 +393,28 @@ class Weorcanjan:
             description="""
             Saves and restores sessions of applications.
             Please note:-
-            You need to understand if saving the arguments for a program is a good idea or not.
+            You need to understand if saving the arguments for a program is a good idea
+            or not.
             For example... chrome its a bad idea, as the main Chrome process will spawn the others..
             Whereas for a application like a paint app you might have some args you want to start it with.
             """
         )
 
-        # todo(matt): refactor into dicts:-
-        # argdef_thing = {
-        #     "save": "s",
-        #     "restore": "r",
-        #     "open-data-dir": "o",
-        #     "odd": "d",
-        # }
-        # if args.action == argdef_thing["save"] or args.action == argdef_thing["odd"]:
-        #     print("The action is either save or odd.")
-        # if "thing" in argdef_thing.keys():
-        # print("The key 'thing' exists in the dictionary.")
-        # short_forms = list(argdef_thing.values())
-        # print(short_forms)
-
-        argdef_command_dict = {
-            "s": "save",
-            "r": "restore",
-            "odd": "open-data-dir"
-        }
-
-        argdef_debugging_dict = {
-
-        }
-
-        # commands definitions
-        argdef_commands = [
-            "save",
-            "restore",
-            "open-data-dir",
-            "odd"
-        ]
-
-        argdef_debugging_commands = [
-            "create-test-session",
-            "restore-test-session",
-            "test-merge-user-ignore",
-            "guard_win_ver"
-        ]
-
         parser.add_argument(
             "action",
-            choices=[*argdef_commands, *argdef_debugging_commands],
+            choices=Weorcanjan.ARGDEF_ALL_COMMANDS_LIST,
             help="""
-                The action to perform. Currently save or restore. Combine with `--name`
+                The action to perform. Currently save or restore.
+                Must be combined with `--name`.
             """
         )
 
-        # add arguments
+        # add not action arguments
         parser.add_argument(
             "--debug",
             action="store_true",
             help="""
-                Enable DEBUG mode
+                Enable DEBUG mode; this will print a lot more information.
             """
         )
 
@@ -461,20 +449,27 @@ class Weorcanjan:
 
         Weorcanjan.guard_win_ver(11 if args.enable_win11 else 10)
 
+        if args.debug:
+            print("all commands:")
+            print(Weorcanjan.ARGDEF_ALL_COMMANDS_LIST)
+            print("")
+
         print(f"Action: {args.action}")
 
-        if (
-            args.action not in argdef_commands and
-            args.action not in argdef_debugging_commands
-        ):
+        if args.action not in Weorcanjan.ARGDEF_ALL_COMMANDS_LIST:
             parser.print_help()
 
-        if args.action in argdef_commands:
+        # action is not debugging...
+        # todo(matt): too many lists, we just need one hmmm
+        elif args.action in Weorcanjan.ARGDEF_COMMANDS_LIST:
 
             Weorcanjan.guard_invocation()
 
-            if args.action == argdef_commands[2] or argdef_commands[3]:
-                Weorcanjan.open_explorer(Weorcanjan.get_data_path())
+            # match commands that don't require any args
+            for key, method in Weorcanjan.ARGDEF_METHOD_DICT:
+                if args.action in key:
+                    print("henry")
+                    Weorcanjan.open_explorer(Weorcanjan.get_data_path())
 
             Weorcanjan.merge_user_ignore(args.myignore)
 
@@ -483,16 +478,18 @@ class Weorcanjan:
             else:
                 print(f"--name is required to use {args.action}")
 
-            if args.action == argdef_commands[0]:
+            if args.action == argdef_all_commands_list[0]:
                 Weorcanjan.save_session(args.name)
-            if args.action == argdef_commands[1]:
+            if args.action == argdef_all_commands_list[1]:
                 Weorcanjan.restore_session(args.session_name)
 
-        else:
-            if args.action == argdef_debugging_commands[0]:
+        elif args.action in argdef_debugging_dict:
+            if args.action == argdef_debugging_dict[0]:
                 Weorcanjan.create_test_session()
-            elif args.action == argdef_debugging_commands[1]:
+            elif args.action == argdef_debugging_dict[1]:
                 Weorcanjan.merge_user_ignore()
+            elif args.action == argdef_debugging_dict[2]:
+                Weorcanjan.guard_win_ver()
 
 
 if __name__ == "__main__":
