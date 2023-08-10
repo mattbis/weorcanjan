@@ -1,0 +1,15 @@
+build
+dist
+graveyard
+documentation/build
+
+# ignore idea and vscode
+.idea
+.vscode
+
+# Ignore the venv directory
+venv/
+
+# Ignore the __pycache__ directory and compiled bytecode files
+__pycache__/
+*.pyc
