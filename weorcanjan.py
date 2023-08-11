@@ -88,7 +88,6 @@ class Weorcanjan:
     # use the questionary to put to ignore
     @staticmethod
     def merge_user_ignore(
-        cls,
         myignore_filename: str = DEFAULT_MYIGNORE_FILENAME
     ) -> None:
 
@@ -363,28 +362,45 @@ class Weorcanjan:
             print("")
 
     ARGDEF_METHOD_DICT = {
-        ("save", "s"):
-            {"m": "save_session", "t": "cmd"},
-        ("restore", "r"):
-            {"m": "restore_session", "t": "cmd"},
-        ("open-data-dir", "odd"):
-            {"m": "open_data_dir", "t": "cmd"},
-        ("create-test-session", "cts"):
-            {"m": "create_test_session", "t": "debug"},
-        ("restore-test-session", "rts"):
-            {"m": "restore_test_session", "t": "debug"},
-        ("test-merge-user-ignore", "tmui"):
-            {"m": "test_merge_user_ignore", "t": "debug"},
-        ("guard-win-ver", "gwv"):
-            {"m": "guard_win_ver", "t": "debug"}
+        "save_session": {
+            "long": "save", "short": "s", "t": "cmd"
+        },
+        "restore_session": {
+            "long": "restore", "short": "r", "t": "cmd"
+        },
+        "open_data_dir": {
+            "long": "open-data-dir", "short": "odd", "t": "cmd"
+        },
+        "create_test_session": {
+            "long": "create-test-session", "short": "cts", "t": "debug"
+        },
+        "restore_test_session": {
+            "long": "restore-test-session", "short": "rts", "t": "debug"
+        },
+        "test_merge_user_ignore": {
+            "long": "test-merge-user-ignore", "short": "tmui", "t": "debug"
+        },
+        "guard_win_ver": {
+            "long": "guard-win-ver", "short": "gwv", "t": "debug"
+        }
     }
     ARGDEF_METHOD_DICT.__doc__ = """
     Defines all valid commands actions to map to methods.
     """
-
-    ARGDEF_METHOD_DICT_ITEMS = ARGDEF_METHOD_DICT.items()
-
-    ARGDEF_ALL_COMMANDS_LIST = list(chain(*(map(list, ARGDEF_METHOD_DICT.keys()))))
+    ARGDEF_ACTIONS = list(chain(*(map(list, ARGDEF_METHOD_DICT.keys()))))
+    ARGDEF_ACTIONS.__doc__ = """
+    Convenience list of all commands
+    """
+    ARGDEF_CMDS = [
+        key
+        for key, value in ARGDEF_METHOD_DICT.items()
+        if value["t"] == "cmd"
+    ]
+    ARGDEF_DEBUGS = [
+        key
+        for key, value in ARGDEF_METHOD_DICT.items()
+        if value["t"] == "debug"
+    ]
 
     @staticmethod
     def main() -> None:
@@ -402,7 +418,7 @@ class Weorcanjan:
 
         parser.add_argument(
             "action",
-            choices=Weorcanjan.ARGDEF_ALL_COMMANDS_LIST,
+            choices=Weorcanjan.ARGDEF_ACTIONS,
             help="""
                 The action to perform. Currently save or restore.
                 Must be combined with `--name`.
@@ -451,44 +467,62 @@ class Weorcanjan:
 
         if args.debug:
             print("all commands:")
-            print(Weorcanjan.ARGDEF_ALL_COMMANDS_LIST)
+            print(Weorcanjan.ARGDEF_ACTIONS)
             print("")
 
         print(f"Action: {args.action}")
 
-        if args.action not in Weorcanjan.ARGDEF_ALL_COMMANDS_LIST:
+        # I suppose it should be def for typing
+        check_match = lambda argdef, arg: (  # noqa
+            argdef["long"] == arg or
+            argdef["short"] == arg
+        )
+
+        if args.action not in Weorcanjan.ARGDEF_ACTIONS:
             parser.print_help()
 
         # action is not debugging...
         # todo(matt): too many lists, we just need one hmmm
-        elif args.action in Weorcanjan.ARGDEF_COMMANDS_LIST:
+        elif args.action in Weorcanjan.ARGDEF_CMDS:
 
             Weorcanjan.guard_invocation()
 
             # match commands that don't require any args
-            for key, method in Weorcanjan.ARGDEF_METHOD_DICT:
-                if args.action in key:
-                    print("henry")
-                    Weorcanjan.open_explorer(Weorcanjan.get_data_path())
+            if check_match(Weorcanjan.ARGDEF_METHOD_DICT.get("open_data_dir"),
+                           args.action):
+                Weorcanjan.open_explorer(Weorcanjan.get_data_path())
 
+            # functional commands
+
+            # functional block means we can merge user ignore if its exists
+            if None is args.myignore:
+                print("Hint: you can supply your own filename for user ignore list "
+                      "using --myignore")
             Weorcanjan.merge_user_ignore(args.myignore)
 
             if args.session_name:
                 print(f"You are using session_name: {args.session_name}.txt")
             else:
                 print(f"--name is required to use {args.action}")
+                exit(1)
 
-            if args.action == argdef_all_commands_list[0]:
+            if check_match(Weorcanjan.ARGDEF_METHOD_DICT.get("save_session"),
+                           args.action):
                 Weorcanjan.save_session(args.name)
-            if args.action == argdef_all_commands_list[1]:
+            if check_match(Weorcanjan.ARGDEF_METHOD_DICT.get("restore_session"),
+                           args.action):
                 Weorcanjan.restore_session(args.session_name)
 
-        elif args.action in argdef_debugging_dict:
-            if args.action == argdef_debugging_dict[0]:
+        # lazy debugging and testing
+        elif args.action in Weorcanjan.ARGDEF_DEBUGS:
+            if check_match(Weorcanjan.ARGDEF_METHOD_DICT.get("create_test_session"),
+                           args.action):
                 Weorcanjan.create_test_session()
-            elif args.action == argdef_debugging_dict[1]:
+            elif check_match(Weorcanjan.ARGDEF_METHOD_DICT.get("merge_user_ignore"),
+                             args.action):
                 Weorcanjan.merge_user_ignore()
-            elif args.action == argdef_debugging_dict[2]:
+            elif check_match(Weorcanjan.ARGDEF_METHOD_DICT.get("guard_win_ver"),
+                             args.action):
                 Weorcanjan.guard_win_ver()
 
 
