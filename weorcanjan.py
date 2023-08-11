@@ -48,57 +48,72 @@ class Weorcanjan:
     """
 
     # static class attributes
-    DEFAULT_DATA_DIR_SEGMENT = "weorcanjan"
-    DEFAULT_SESSION_SEGMENT = "saved-sessions"
+    DATA_DIR_SEGMENT = "weorcanjan"
+    SESSION_DIR_SEGMENT = "saved-sessions"
     DEFAULT_EXTENSION = ".txt"
-    # DEFAULT_SESSION_FILENAME = f"saved_session{DEFAULT_EXTENSION}"
-    DEFAULT_TEST_SESSION_FILENAME = f"test_session{DEFAULT_EXTENSION}"
-    DEFAULT_MYIGNORE_FILENAME = f"my_ignore{DEFAULT_EXTENSION}"
-    DEFAULT_MANY_PROCESS = 190
+    TEST_SESSION_FILENAME = f"test_session{DEFAULT_EXTENSION}"
+    MYIGNORE_FILENAME = f"my_ignore{DEFAULT_EXTENSION}"
+    MANY_PROCESS = 190
 
     IGNORE_SET = set(IGNORE_LIST)
 
+    # todo(matt): later on
     SESSION_FILENAMES = {}
 
+    ARGS = None
+
     @classmethod
-    def new_session_factory(cls):
+    def factory_method(cls):
         pass
 
     @staticmethod
     def open_explorer(
         path: str
     ) -> None:
-        subprocess.Popen(
-            ["explorer.exe", path],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
+        try:
+            proc = subprocess.Popen(
+                ["explorer.exe", path],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            output, err = proc.communicate()
+        except Exception as exc_err:
+            print(exc_err)
 
-    # todo(matt): optimise by storing as classy class class
     @staticmethod
     def get_data_path(
         *paths: typing.Optional[str]
     ) -> str:
-        return os.path.join(
+        root_path = os.path.join(
             os.getenv("APPDATA"),
-            Weorcanjan.DEFAULT_DATA_DIR_SEGMENT,
+            Weorcanjan.DATA_DIR_SEGMENT,
             *paths
         )
+        if Weorcanjan.ARGS.debug:
+            print(__name__, f"get_data_path: {root_path}")
+            print(root_path)
+        return root_path
 
     # use the questionary to put to ignore
     @staticmethod
     def merge_user_ignore(
-        myignore_filename: str = DEFAULT_MYIGNORE_FILENAME
+        myignore_filename = None
     ) -> None:
 
+        if myignore_filename is None:
+            myignore_filename = Weorcanjan.MYIGNORE_FILENAME
+
         # get expected my ignore file name
-        my_ignore_path = Weorcanjan.get_data_path(myignore_filename)
+        full_path = Weorcanjan.get_data_path(
+            Weorcanjan.SESSION_DIR_SEGMENT,
+            myignore_filename
+        )
 
         # merge in the users choices that are not part of the repository
-        if os.path.exists(my_ignore_path):
+        if os.path.exists(full_path):
             print("Found user my ignore list")
 
-            with open(my_ignore_path) as f:
+            with open(full_path) as f:
                 for process in f.read().splitlines():
                     if tuple(process) not in Weorcanjan.IGNORE_SET:
                         Weorcanjan.IGNORE_SET.add(process)
@@ -140,7 +155,7 @@ class Weorcanjan:
     def ensure_data_dir() -> None:
         # Get the path to the saved session's directory.
         saved_sessions_dir = Weorcanjan.get_data_path(
-            Weorcanjan.DEFAULT_SESSION_SEGMENT
+            Weorcanjan.SESSION_DIR_SEGMENT
         )
 
         if False is os.path.isdir(saved_sessions_dir):
@@ -161,11 +176,6 @@ class Weorcanjan:
         Returns:
             None: None.
         """
-
-        # Get the path to the saved session's directory.
-        saved_sessions_dir = Weorcanjan.get_data_path(
-            Weorcanjan.DEFAULT_SESSION_SEGMENT
-        )
 
         Weorcanjan.ensure_data_dir()
 
@@ -195,10 +205,14 @@ class Weorcanjan:
             print("You must run either chrome and/or firefox for this to work")
             exit(1)
 
+        # Get the path to the saved session's directory.
+        saved_sessions_file = Weorcanjan.get_data_path(
+            Weorcanjan.SESSION_DIR_SEGMENT,
+            Weorcanjan.TEST_SESSION_FILENAME
+        )
+
         # Create the test session file.
-        with open(Weorcanjan.get_data_path(
-            Weorcanjan.DEFAULT_TEST_SESSION_FILENAME
-        ), "w") as f:
+        with open(saved_sessions_file, "w") as f:
             if chrome_path:
                 f.write(chrome_path + "\n")
             if firefox_path:
@@ -223,6 +237,8 @@ class Weorcanjan:
             None: None.
         """
 
+        # todo(matt): we need the saving args part next
+
         assert None is not session_filename
 
         # Get a list of all the processes for the current user.
@@ -235,9 +251,6 @@ class Weorcanjan:
         # Create a set of open applications.
         open_applications = set()
 
-        print("type")
-        print(Weorcanjan.IGNORE_SET)
-
         for process in processes:
             try:
                 name = process.info["name"]  # noqa
@@ -247,8 +260,10 @@ class Weorcanjan:
             except psutil.Error as psutil_err:
                 print(psutil_err)
 
-        saved_sessions_dir = Weorcanjan.get_data_path()
-        saved_sessions_filename = Weorcanjan.get_data_path(session_filename)
+        saved_sessions_filename = Weorcanjan.get_data_path(
+            Weorcanjan.DATA_DIR_SEGMENT,
+            session_filename
+        )
 
         Weorcanjan.ensure_data_dir()
 
@@ -263,7 +278,7 @@ class Weorcanjan:
         # Get the list of applications that the user wants to save.
         applications = []
         for app in open_applications:
-            print(app)
+            print(f"Applications: {app}")
             response = input("Do you want to save " + app + "? (y/n): ")
             if response == "y":
                 applications.append(app)
@@ -298,7 +313,10 @@ class Weorcanjan:
         """
         assert None is not session_filename
 
-        session_filename = Weorcanjan.get_data_path(session_filename)
+        session_filename = Weorcanjan.get_data_path(
+            Weorcanjan.SESSION_DIR_SEGMENT,
+            session_filename
+        )
 
         # Get the list of saved applications from the file.
         with open(session_filename, "r") as f:
@@ -332,9 +350,9 @@ class Weorcanjan:
         print("")
         num_of_process = Weorcanjan.get_number_of_processes()
         print(f"You have: {num_of_process} process running...")
-        if num_of_process > Weorcanjan.DEFAULT_MANY_PROCESS:
+        if num_of_process > Weorcanjan.MANY_PROCESS:
             print(
-                f"Over {Weorcanjan.DEFAULT_MANY_PROCESS} processes, try to exempt "
+                f"Over {Weorcanjan.MANY_PROCESS} processes, try to exempt "
                 "with your own list to reduce questions")
             print("")
 
@@ -361,64 +379,92 @@ class Weorcanjan:
             print("Tested only on Windows 10, should work on 11")
             print("")
 
-    ARGDEF_METHOD_DICT = {
-        "save_session": {
-            "long": "save", "short": "s", "t": "cmd"
+    ARGDEF_ACTIONS = {
+        # functional
+        "save": {
+            "long": "save", "short": "s",
+            "m": "save_session", "t": "cmd"
         },
-        "restore_session": {
-            "long": "restore", "short": "r", "t": "cmd"
+        "restore": {
+            "long": "restore", "short": "r",
+            "m": "restore_session", "t": "cmd"
         },
-        "open_data_dir": {
-            "long": "open-data-dir", "short": "odd", "t": "cmd"
+        "open-data-dir": {
+            "long": "open-data-dir", "short": "odd",
+            "m": "open_data_dir", "t": "cmd"
         },
-        "create_test_session": {
-            "long": "create-test-session", "short": "cts", "t": "debug"
+        # debug
+        "test-save": {
+            "long": "test-save", "short": "cts",
+            "m": "test_save", "t": "debug"
         },
-        "restore_test_session": {
-            "long": "restore-test-session", "short": "rts", "t": "debug"
+        "test-restore": {
+            "long": "test-restore", "short": "rts",
+            "m": "test_restore", "t": "debug"
         },
-        "test_merge_user_ignore": {
-            "long": "test-merge-user-ignore", "short": "tmui", "t": "debug"
+        "test-mui": {
+            "long": "test-mui", "short": "tmui",
+            "m": "test_user_merge", "t": "debug"
         },
-        "guard_win_ver": {
-            "long": "guard-win-ver", "short": "gwv", "t": "debug"
+        "test-gwv": {
+            "long": "guard-win-ver", "short": "gwv",
+            "m": "guard_win_ver", "t": "debug"
         }
     }
-    ARGDEF_METHOD_DICT.__doc__ = """
+
+    """
     Defines all valid commands actions to map to methods.
     """
-    ARGDEF_ACTIONS = list(chain(*(map(list, ARGDEF_METHOD_DICT.keys()))))
-    ARGDEF_ACTIONS.__doc__ = """
+    ALL_ACTIONS = list(chain(*(map(
+        lambda arg: [arg["short"], arg["long"]],
+        ARGDEF_ACTIONS.values()
+    ))))
+
+    """
     Convenience list of all commands
     """
-    ARGDEF_CMDS = [
-        key
-        for key, value in ARGDEF_METHOD_DICT.items()
+    ARGDEF_CMDS = list(chain(*[
+        [value["long"], value["short"]]
+        for key, value in ARGDEF_ACTIONS.items()
         if value["t"] == "cmd"
-    ]
-    ARGDEF_DEBUGS = [
-        key
-        for key, value in ARGDEF_METHOD_DICT.items()
+    ]))
+
+    """
+        Convenience list of all debugs
+    """
+    ARGDEF_DEBUGS = list(chain(*[
+        [value["long"], value["short"]]
+        for key, value in ARGDEF_ACTIONS.items()
         if value["t"] == "debug"
-    ]
+    ]))
+
+    @staticmethod
+    def _check_action_matches(
+        argdef: dict,
+        action: str
+    ):
+        return argdef["long"] == action or argdef["short"] == action
 
     @staticmethod
     def main() -> None:
+
         # Set up the arguments for the script as command only style
         parser = argparse.ArgumentParser(
             description="""
             Saves and restores sessions of applications.
             Please note:-
-            You need to understand if saving the arguments for a program is a good idea
-            or not.
-            For example... chrome its a bad idea, as the main Chrome process will spawn the others..
-            Whereas for a application like a paint app you might have some args you want to start it with.
+                You need to understand if saving the arguments for a program is a
+                good idea or not.
+            For example... Chrome its a bad idea, as the main Chrome process will
+            spawn the others with dynamic generated arg-sets.
+            Whereas for a application like a paint app you might have some args
+            you want to start it with.
             """
         )
 
         parser.add_argument(
             "action",
-            choices=Weorcanjan.ARGDEF_ACTIONS,
+            choices=Weorcanjan.ALL_ACTIONS,
             help="""
                 The action to perform. Currently save or restore.
                 Must be combined with `--name`.
@@ -439,7 +485,7 @@ class Weorcanjan:
             action="store_true",
             dest="enable_win11",
             help="""
-                Enable unsupported Windows 11
+                Enable unsupported Windows 11.
             """
         )
 
@@ -447,7 +493,7 @@ class Weorcanjan:
             "--name", "-n",
             dest="session_name",
             help="""
-            The filename for the session saved in appData/Roaming/weorcanjan.
+                The filename for the session saved in appData/Roaming/weorcanjan.
             """
         )
 
@@ -455,42 +501,47 @@ class Weorcanjan:
             "--myignore", "-mi",
             dest="myignore",
             help=f"""
-            Set your ignore name file in data directory.
-            Defaults too: {Weorcanjan.DEFAULT_MYIGNORE_FILENAME}.
-            If you don't supply extension I will.
+                Set your ignore name file in data directory.
+                Defaults too: {Weorcanjan.MYIGNORE_FILENAME}.
+                If you don't supply extension I will.
             """
         )
 
-        args = parser.parse_args()
+        Weorcanjan.ARGS = parser.parse_args()
+        args = Weorcanjan.ARGS
+
+        if args.debug:
+            print("")
+            print("ARGDEF_CMDS")
+            pprint.pprint(Weorcanjan.ARGDEF_CMDS)
+
+            print("ARGDEF_DEBUGS")
+            pprint.pprint(Weorcanjan.ARGDEF_DEBUGS)
+
+            print("DEBUG: all commands:")
+            pprint.pprint(Weorcanjan.ALL_ACTIONS)
+            print("")
 
         Weorcanjan.guard_win_ver(11 if args.enable_win11 else 10)
 
-        if args.debug:
-            print("all commands:")
-            print(Weorcanjan.ARGDEF_ACTIONS)
-            print("")
-
         print(f"Action: {args.action}")
 
-        # I suppose it should be def for typing
-        check_match = lambda argdef, arg: (  # noqa
-            argdef["long"] == arg or
-            argdef["short"] == arg
-        )
-
-        if args.action not in Weorcanjan.ARGDEF_ACTIONS:
+        if args.action not in Weorcanjan.ALL_ACTIONS:
             parser.print_help()
 
         # action is not debugging...
-        # todo(matt): too many lists, we just need one hmmm
         elif args.action in Weorcanjan.ARGDEF_CMDS:
 
             Weorcanjan.guard_invocation()
 
             # match commands that don't require any args
-            if check_match(Weorcanjan.ARGDEF_METHOD_DICT.get("open_data_dir"),
-                           args.action):
-                Weorcanjan.open_explorer(Weorcanjan.get_data_path())
+            if Weorcanjan._check_action_matches(
+                Weorcanjan.ARGDEF_ACTIONS.get("open-data-dir"),
+                args.action
+            ):
+                Weorcanjan.open_explorer(
+                    Weorcanjan.get_data_path()
+                )
 
             # functional commands
 
@@ -498,7 +549,7 @@ class Weorcanjan:
             if None is args.myignore:
                 print("Hint: you can supply your own filename for user ignore list "
                       "using --myignore")
-            Weorcanjan.merge_user_ignore(args.myignore)
+                Weorcanjan.merge_user_ignore(args.myignore)
 
             if args.session_name:
                 print(f"You are using session_name: {args.session_name}.txt")
@@ -506,23 +557,44 @@ class Weorcanjan:
                 print(f"--name is required to use {args.action}")
                 exit(1)
 
-            if check_match(Weorcanjan.ARGDEF_METHOD_DICT.get("save_session"),
-                           args.action):
+            if Weorcanjan._check_action_matches(
+                Weorcanjan.ARGDEF_ACTIONS.get("save"),
+                args.action
+            ):
                 Weorcanjan.save_session(args.name)
-            if check_match(Weorcanjan.ARGDEF_METHOD_DICT.get("restore_session"),
-                           args.action):
+
+            if Weorcanjan._check_action_matches(
+                Weorcanjan.ARGDEF_ACTIONS.get("restore"),
+                args.action
+            ):
                 Weorcanjan.restore_session(args.session_name)
 
         # lazy debugging and testing
         elif args.action in Weorcanjan.ARGDEF_DEBUGS:
-            if check_match(Weorcanjan.ARGDEF_METHOD_DICT.get("create_test_session"),
-                           args.action):
+            if Weorcanjan._check_action_matches(
+                Weorcanjan.ARGDEF_ACTIONS.get("test-save"),
+                args.action
+            ):
                 Weorcanjan.create_test_session()
-            elif check_match(Weorcanjan.ARGDEF_METHOD_DICT.get("merge_user_ignore"),
-                             args.action):
+
+            elif Weorcanjan._check_action_matches(
+                Weorcanjan.ARGDEF_ACTIONS.get("test-restore"),
+                args.action
+            ):
+                Weorcanjan.restore_session(
+                    Weorcanjan.TEST_SESSION_FILENAME
+                )
+
+            elif Weorcanjan._check_action_matches(
+                Weorcanjan.ARGDEF_ACTIONS.get("test-mui"),
+                args.action
+            ):
                 Weorcanjan.merge_user_ignore()
-            elif check_match(Weorcanjan.ARGDEF_METHOD_DICT.get("guard_win_ver"),
-                             args.action):
+
+            elif Weorcanjan._check_action_matches(
+                Weorcanjan.ARGDEF_ACTIONS.get("test-gwv"),
+                args.action
+            ):
                 Weorcanjan.guard_win_ver()
 
 
