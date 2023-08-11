@@ -57,8 +57,7 @@ class Weorcanjan:
 
     IGNORE_SET = set(IGNORE_LIST)
 
-    # todo(matt): later on
-    SESSION_FILENAMES = {}
+    DEFAULT_UI = "questionary"
 
     ARGS = None
 
@@ -218,6 +217,47 @@ class Weorcanjan:
             if firefox_path:
                 f.write(firefox_path + "\n")
 
+    # ask questions routine
+    # 1) ask for each application
+    # 2) ask for args for each selected
+
+    class PersistApplicationType:
+        """
+        Type to represent data stored for each persisted application
+        """
+        name: str = None,
+        path: str = None,
+        args: typing.Optional[str] = None
+
+    @staticmethod
+    def basic_input_questions(
+        open_applications
+    ):
+        save_applications = []
+
+        # used when input == basic
+        for app in open_applications:
+            print(f"Applications: {app}")
+            response = input("Do you want to save " + app + "? (y/n): ")
+            if response == "y":
+                save_applications.append(app)
+            else:
+                print(f"Omitted {app}")
+
+        pass
+
+    class QuestionaryChecklistQuestions:
+        # questionary.select(
+        #     "What do you want to do?",
+        #     choices=[
+        #         'Order a pizza',
+        #         'Make a reservation',
+        #         'Ask for opening hours'
+        #     ]).ask()  # returns value of selection
+        pass
+
+    # todo(matt): or class GUIInputSession thing
+
     @staticmethod
     def save_session(
         session_filename: str = typing.Union[str, None]
@@ -267,31 +307,19 @@ class Weorcanjan:
 
         Weorcanjan.ensure_data_dir()
 
-        # questionary.select(
-        #     "What do you want to do?",
-        #     choices=[
-        #         'Order a pizza',
-        #         'Make a reservation',
-        #         'Ask for opening hours'
-        #     ]).ask()  # returns value of selection
+        # a list of applications as dicts to save
+        save_applications = []
 
-        # Get the list of applications that the user wants to save.
-        applications = []
-        for app in open_applications:
-            print(f"Applications: {app}")
-            response = input("Do you want to save " + app + "? (y/n): ")
-            if response == "y":
-                applications.append(app)
-            else:
-                print(f"Omitted {app}")
+        # old get the minimum...
+        Weorcanjan.basic_input_questions(open_applications)
 
-        if len(applications) == 0:
+        if len(save_applications) == 0:
             print("Nothing to do... exiting")
             exit(0)
 
         # Save the list of open applications to a file.
         with open(saved_sessions_filename, "w") as f:
-            for app in applications:
+            for app in save_applications:
                 f.write(app + "\n")
 
     @staticmethod
