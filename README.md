@@ -2,7 +2,9 @@
 
 ### DO NOT USE THIS SCRIPT UNLESS YOU KNOW WHAT RUNS ON WINDOWS
 
-Status : Alpha alpha alpha
+**Status** : *Alpha alpha alpha*
+
+### purpose
 
 - morning session Windows Session save/restore script
 
@@ -12,10 +14,6 @@ issues that you find.
 In particular any missing windows processes to add to the ignore list.
 
 ### usage
-
-### purpose
-
-- restore applications **without** args.
 
 ### defects / roadmap
 

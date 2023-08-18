@@ -535,6 +535,14 @@ class Weorcanjan:
             """
         )
 
+        parser.add_argument(
+            "--gui", "-g",
+            dest="enable_ctk",
+            help=f"""
+                Enable CustomTkinter gui.
+            """
+        )
+
         Weorcanjan.ARGS = parser.parse_args()
         args = Weorcanjan.ARGS
 
